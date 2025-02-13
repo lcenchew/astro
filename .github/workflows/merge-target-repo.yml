@@ -13,7 +13,9 @@ jobs:
     steps:
       - name: Checkout this Repo
         uses: actions/checkout@v4
-
+        with:
+          fetch-depth: 0  # Ensure full history for merging
+          
       - name: Configure Git
         run: |
           git config --global user.name "github-actions[bot]"
