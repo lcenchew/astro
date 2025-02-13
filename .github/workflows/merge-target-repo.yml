@@ -8,7 +8,7 @@ on:
         required: true
         type: string
 jobs:
-  merge-template:
+  merge-target:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout this Repo
