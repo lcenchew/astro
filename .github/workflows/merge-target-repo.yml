@@ -12,9 +12,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout this Repo
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}  # Use the secret for authentication
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Ensure full history for merging
+          token: ${{ secrets.GH_TOKEN }} 
 
       - name: Configure Git
         run: |
@@ -37,8 +40,6 @@ jobs:
           git commit -m "Merge ${{ github.event.inputs.target_repo }}" || echo "No changes to commit"
 
       - name: Push Merge Branch to Current Repo
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}  # Use the secret for authentication
         run: |
           git remote set-url origin https://github.com/${{ github.repository }}.git
           git push https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git merge-template
