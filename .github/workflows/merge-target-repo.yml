@@ -12,8 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout this Repo
-        env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}  # Use the secret for authentication
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Ensure full history for merging
@@ -41,4 +39,4 @@ jobs:
 
       - name: Push Merge Branch to Current Repo
         run: |
-          git push origin 
+          git push --set-upstream origin merge-target
