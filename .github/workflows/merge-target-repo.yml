@@ -1,0 +1,37 @@
+name: Merge Target Repo
+
+on:
+  workflow_dispatch:  # This allows manual triggering
+
+jobs:
+  merge-template:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Prompt for Target Repo URL
+        id: input
+        run: |
+          echo "Enter the target repository URL (HTTPS format):"
+          read -r target_repo
+          echo "TARGET_REPO=$target_repo" >> $GITHUB_ENV
+
+      - name: Checkout this Repo
+        uses: actions/checkout@v4
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add Target Repo as Remote
+        run: |
+          git remote add target $TARGET_REPO
+          git fetch target
+
+      - name: Create and Switch to Merge Branch
+        run: |
+          git checkout -b merge-target
+          git merge origin/main --allow-unrelated-histories || true  # Allow merge conflicts
+
+      - name: Push Merge Branch to Current Repo
+        run: |
+          git push origin merge-target
