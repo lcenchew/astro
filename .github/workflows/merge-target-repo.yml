@@ -41,4 +41,4 @@ jobs:
 
       - name: Push Merge Branch to Current Repo
         run: |
-          git push --set-upstream origin merge-target 
+          git push origin 
