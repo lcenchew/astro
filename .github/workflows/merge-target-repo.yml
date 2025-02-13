@@ -41,6 +41,4 @@ jobs:
 
       - name: Push Merge Branch to Current Repo
         run: |
-          git remote set-url origin https://github.com/${{ github.repository }}.git
-          git push https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git merge-template
- 
+          git push 
