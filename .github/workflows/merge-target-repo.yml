@@ -31,6 +31,11 @@ jobs:
           git checkout -b merge-target
           git merge origin/main --allow-unrelated-histories || true  # Allow merge conflicts
 
+      - name: Commit Changes (if there are changes)
+        run: |
+          git add .
+          git commit -m "Merge ${{ github.event.inputs.target_repo }}" || echo "No changes to commit"
+
       - name: Push Merge Branch to Current Repo
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}  # Use the secret for authentication
