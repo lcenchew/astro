@@ -2,18 +2,15 @@ name: Merge Target Repo
 
 on:
   workflow_dispatch:  # This allows manual triggering
-
+    inputs:
+      target_repo:
+        description: "Enter the target repository URL (HTTPS format)"
+        required: true
+        type: string
 jobs:
   merge-template:
     runs-on: ubuntu-latest
     steps:
-      - name: Prompt for Target Repo URL
-        id: input
-        run: |
-          echo "Enter the target repository URL (HTTPS format):"
-          read -r target_repo
-          echo "TARGET_REPO=$target_repo" >> $GITHUB_ENV
-
       - name: Checkout this Repo
         uses: actions/checkout@v4
 
@@ -24,7 +21,7 @@ jobs:
 
       - name: Add Target Repo as Remote
         run: |
-          git remote add target $TARGET_REPO
+          git remote add target ${{ github.event.inputs.target_repo }}
           git fetch target
 
       - name: Create and Switch to Merge Branch
