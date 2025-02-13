@@ -15,7 +15,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Ensure full history for merging
-          
+
       - name: Configure Git
         run: |
           git config --global user.name "github-actions[bot]"
@@ -32,5 +32,9 @@ jobs:
           git merge origin/main --allow-unrelated-histories || true  # Allow merge conflicts
 
       - name: Push Merge Branch to Current Repo
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}  # Use the secret for authentication
         run: |
-          git push origin merge-target
+          git remote set-url origin https://github.com/${{ github.repository }}.git
+          git push https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git merge-template
+ 
