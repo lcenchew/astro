@@ -1,0 +1,140 @@
+name: Merge Source Repository
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_repo:
+        description: 'Source repository URL (e.g., owner/repo)'
+        required: true
+        type: string
+      source_branch:
+        description: 'Source repository branch'
+        required: true
+        default: 'main'
+        type: string
+      tracking_branch:
+        description: 'Name of tracking branch'
+        required: true
+        default: 'source-tracking'
+        type: string
+
+jobs:
+  merge-repos:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout current repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Add source repository
+        run: |
+          git remote add source_repo https://github.com/${{ github.event.inputs.source_repo }}.git
+          git fetch source_repo ${{ github.event.inputs.source_branch }}
+
+      - name: Create or update tracking branch
+        id: tracking
+        continue-on-error: true
+        run: |
+          if git show-ref --verify --quiet refs/heads/${{ github.event.inputs.tracking_branch }}; then
+            git checkout ${{ github.event.inputs.tracking_branch }}
+            git merge source_repo/${{ github.event.inputs.source_branch }} --allow-unrelated-histories
+          else
+            git checkout -b ${{ github.event.inputs.tracking_branch }} source_repo/${{ github.event.inputs.source_branch }}
+          fi
+
+      - name: Handle tracking branch conflicts
+        if: steps.tracking.outcome == 'failure'
+        run: |
+          git checkout -b ${{ github.event.inputs.tracking_branch }}-temp source_repo/${{ github.event.inputs.source_branch }}
+          echo "CONFLICT_BRANCH=${{ github.event.inputs.tracking_branch }}-temp" >> $GITHUB_ENV
+          echo "CONFLICT_TYPE=tracking" >> $GITHUB_ENV
+
+      - name: Create merged branch
+        id: merge
+        if: steps.tracking.outcome == 'success'
+        continue-on-error: true
+        run: |
+          CURRENT_BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+          git checkout -b merged
+          git merge ${{ github.event.inputs.tracking_branch }} --allow-unrelated-histories
+          git merge $CURRENT_BRANCH --allow-unrelated-histories
+
+      - name: Handle merge conflicts
+        if: steps.merge.outcome == 'failure'
+        run: |
+          CURRENT_BRANCH=${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}
+          git checkout -b merged-temp
+          echo "CONFLICT_BRANCH=merged-temp" >> $GITHUB_ENV
+          echo "CONFLICT_TYPE=merge" >> $GITHUB_ENV
+
+      - name: Push changes on success
+        if: steps.tracking.outcome == 'success' && steps.merge.outcome == 'success'
+        run: |
+          git push origin ${{ github.event.inputs.tracking_branch }}
+          git push origin merged
+
+      - name: Create Pull Request for conflicts
+        if: env.CONFLICT_BRANCH != ''
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const conflictType = process.env.CONFLICT_TYPE;
+            const conflictBranch = process.env.CONFLICT_BRANCH;
+            
+            let title, body;
+            if (conflictType === 'tracking') {
+              title = '🔄 Merge Conflicts in Tracking Branch';
+              body = `Merge conflicts detected while updating tracking branch from source repository.
+              
+              ### What happened?
+              - Conflicts occurred while merging from \`${{ github.event.inputs.source_repo }}\`
+              - Source branch: \`${{ github.event.inputs.source_branch }}\`
+              - Target branch: \`${{ github.event.inputs.tracking_branch }}\`
+              
+              ### Next steps:
+              1. Pull this branch locally
+              2. Resolve the conflicts
+              3. Push the changes back
+              4. Re-run the workflow`;
+            } else {
+              title = '🔄 Merge Conflicts in Final Merge';
+              body = `Merge conflicts detected while creating the final merged branch.
+              
+              ### What happened?
+              - Conflicts occurred while merging the tracking branch with your current branch
+              - Source: \`${{ github.event.inputs.tracking_branch }}\`
+              - Target: \`merged\`
+              
+              ### Next steps:
+              1. Pull this branch locally
+              2. Resolve the conflicts
+              3. Push the changes back
+              4. Re-run the workflow`;
+            }
+            
+            await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              head: conflictBranch,
+              base: context.ref.replace('refs/heads/', ''),
+            });
+            
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['merge-conflict']
+            });
+
+      - name: Push conflict branch
+        if: env.CONFLICT_BRANCH != ''
+        run: |
+          git push origin ${{ env.CONFLICT_BRANCH }}
