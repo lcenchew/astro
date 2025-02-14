@@ -24,6 +24,7 @@ jobs:
 
       - name: Add Target Repo as Remote
         run: |
+          echo ${{ github.event.inputs.target_repo }}
           git remote add target ${{ github.event.inputs.target_repo }}
           git fetch target
 
