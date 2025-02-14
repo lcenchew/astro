@@ -18,6 +18,12 @@ on:
         default: 'source-tracking'
         type: string
 
+# Add permissions block at workflow level
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  
 jobs:
   merge-repos:
     runs-on: ubuntu-latest
@@ -82,8 +88,9 @@ jobs:
 
       - name: Create Pull Request for conflicts
         if: env.CONFLICT_BRANCH != ''
-        uses: actions/github-script@v6
+        uses: actions/github-script@v7
         with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const conflictType = process.env.CONFLICT_TYPE;
             const conflictBranch = process.env.CONFLICT_BRANCH;
@@ -125,17 +132,33 @@ jobs:
               title: title,
               body: body,
               head: conflictBranch,
-              base: context.ref.replace('refs/heads/', ''),
+              base: context.ref.replace('refs/heads/', '')
             });
-            
-            await github.rest.issues.addLabels({
+
+      - name: Add labels to PR
+        if: env.CONFLICT_BRANCH != ''
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GH_TOKEN }}
+          script: |
+            const prs = await github.rest.pulls.list({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              issue_number: context.issue.number,
-              labels: ['merge-conflict']
+              head: `${context.repo.owner}:${process.env.CONFLICT_BRANCH}`,
+              state: 'open'
             });
+            
+            if (prs.data.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prs.data[0].number,
+                labels: ['merge-conflict']
+              });
+            }
 
       - name: Push conflict branch
         if: env.CONFLICT_BRANCH != ''
         run: |
           git push origin ${{ env.CONFLICT_BRANCH }}
+          
