@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       source_repo:
-        description: 'Source repository URL (e.g., owner/repo)'
+        description: 'Source repository URL'
         required: true
         type: string
       source_branch:
@@ -40,7 +40,7 @@ jobs:
 
       - name: Add source repository
         run: |
-          git remote add source_repo https://github.com/${{ github.event.inputs.source_repo }}.git
+          git remote add source_repo ${{ github.event.inputs.source_repo }}.git
           git fetch source_repo ${{ github.event.inputs.source_branch }}
 
       - name: Create or update tracking branch
