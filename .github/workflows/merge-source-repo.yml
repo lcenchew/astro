@@ -90,7 +90,7 @@ jobs:
         if: env.CONFLICT_BRANCH != ''
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.GH_TOKEN }}  
           script: |
             const conflictType = process.env.CONFLICT_TYPE;
             const conflictBranch = process.env.CONFLICT_BRANCH;
@@ -139,7 +139,7 @@ jobs:
         if: env.CONFLICT_BRANCH != ''
         uses: actions/github-script@v7
         with:
-          github-token: ${{ secrets.GH_TOKEN }}
+          github-token: ${{ secrets.GH_TOKEN }}  
           script: |
             const prs = await github.rest.pulls.list({
               owner: context.repo.owner,
@@ -161,4 +161,3 @@ jobs:
         if: env.CONFLICT_BRANCH != ''
         run: |
           git push origin ${{ env.CONFLICT_BRANCH }}
-          
